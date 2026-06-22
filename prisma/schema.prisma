@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HabitType {
+  WATER
+  SLEEP
+  WORKOUT
+  MEDICATION
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime   @default(now())
+
+  logs      HabitLog[]
+  goals     Goal[]
+  reminders Reminder[]
+}
+
+model HabitLog {
+  id       String    @id @default(cuid())
+  userId   String
+  type     HabitType
+  value    Float // e.g. 500 (ml), 7.5 (hours), 1 (session/dose)
+  unit     String // "ml", "h", "session", "dose"
+  loggedAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, loggedAt])
+}
+
+// Per-user daily target for each habit type. Drives streaks & progress rings.
+model Goal {
+  id       String    @id @default(cuid())
+  userId   String
+  type     HabitType
+  target   Float
+  unit     String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
+
+// Phase 6 (optional extension) — scaffolded now so migrations don't churn later.
+model Reminder {
+  id       String    @id @default(cuid())
+  userId   String
+  type     HabitType
+  // "HH:mm" local time the reminder fires.
+  time     String
+  enabled  Boolean   @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
