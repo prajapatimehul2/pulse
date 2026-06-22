@@ -48,16 +48,35 @@ jobs:
     # Only deploy on direct pushes to main (not PRs).
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - name: Deploy over SSH
+      - uses: actions/checkout@v4
+
+      # Push-based deploy: the runner already has the checked-out source, so we
+      # rsync it to the box (no deploy key needed for the private repo). The
+      # box's .env, node_modules, and .next are preserved via --exclude.
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy.pem
+          chmod 600 ~/.ssh/deploy.pem
+
+      - name: Rsync source to EC2
+        run: |
+          rsync -az --delete \
+            --exclude node_modules --exclude .next --exclude .git --exclude .env \
+            --exclude tsconfig.tsbuildinfo \
+            -e "ssh -i ~/.ssh/deploy.pem -o StrictHostKeyChecking=no" \
+            ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/health-habit-tracker/
+
+      - name: Install, migrate, build, reload
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 20m
           script: |
             set -e
             cd ~/health-habit-tracker
-            git pull origin main
             npm ci
             npx prisma migrate deploy
             npm run build
