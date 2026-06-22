@@ -1,5 +1,7 @@
 # Pulse — Health & Habit Tracker
 
+**Live:** http://54.172.133.172 — demo login `demo@habit.dev` / `password123`
+
 Log water, sleep, workouts, and medication. Build streaks and see weekly trends.
 
 Built with **Next.js (App Router) · PostgreSQL · Prisma · NextAuth · Tailwind · Recharts**, deployed to **AWS EC2** via a **GitHub Actions** CI/CD pipeline.
